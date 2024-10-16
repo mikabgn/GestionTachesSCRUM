@@ -2,6 +2,7 @@
 
 namespace App\UserStory;
 
+use App\Entity\User;
 use Doctrine\ORM\EntityManager;
 
 class CreateAccount
@@ -14,39 +15,53 @@ class CreateAccount
         $this->entityManager = $entityManager;
     }
     //execute la userstory
-    public function execute(string $pseudo ,string $email, string $password){
+    public function execute(string $pseudo, string $email, string $password)
+    {
+        // Verif donnée présente
+        if (empty($pseudo) || empty($email) || empty($password)) {
+            throw new \Exception("Les données fournies sont incomplètes.");
+        }
 
-            // verif donnée présente
-            // Si tel n'est pas le cas, lancer une exeption
+        // Verifier email valide
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new \Exception("L'email fourni n'est pas valide.");
+        }
 
-            // verifier email valide
-            // Si tel n'est pas le cas, lancer une exeption
+        // Verifier pseudo entre 2-50 var
+        if (strlen($pseudo) < 2 || strlen($pseudo) > 50) {
+            throw new \Exception("Le pseudo doit être compris entre 2 et 50 caractères.");
+        }
 
-            // verifier pseudo entre 2-50 var
-            // Si tel n'est pas le cas, lancer une exeption
+        // Verifier mdp sécu
+        if (strlen($password) < 8 ) {
+            throw new \Exception("Le mot de passe doit contenir au moins 8 caractères.");
+        }
 
-            // verifier mdp sécu
-            // Si tel n'est pas le cas, lancer une exeption
+        // Verifier email UNIQUE
+        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        if ($existingUser) {
+            throw new \Exception("L'email fourni est déjà utilisé.");
+        }
 
-            // verifier email UNIQUE
-            // Si tel n'est pas le cas, lancer une exeption
+        // Insert into bdd les données
+        // 1. haché le mdp
+        $password = password_hash($password, PASSWORD_BCRYPT);
 
-            //Insert into bdd les données
-            // 1. haché le mdp
-            // 2. créer une instance de la classe user avec mail pseudo et mdp haché
-            $user = new User(); //setters
-            // 3. persiste() en utilisant l'entityManager
+        // 2. créer une instance de la classe user avec mail pseudo et mdp haché
+        $user = new User();
+        $user->setPseudo($pseudo);
+        $user->setEmail($email);
+        $user->setPassword($password);
+
+        // 3. persiste() en utilisant l'entityManager
         $this->entityManager->persist($user);
-            // 4. flush
+
+        // 4. flush
         $this->entityManager->flush();
-            // 5. envoie mail de confirmation
-        echo "Un mail a été envoyer à l'utilisateur";
 
-    return $user;
+        // 5. envoie mail de confirmation
+        echo "Un mail a été envoyé à l'utilisateur";
 
+        return $user;
     }
-    //create account mdp que la longueur au moins 8
-    //login
-
-
 }
